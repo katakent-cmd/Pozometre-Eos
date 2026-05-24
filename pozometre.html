@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pozometre Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --accent: #d4a843;
+    --accent2: #a07830;
+    --text: #e8e2d4;
+    --muted: #7a7060;
+    --danger: #c0392b;
+    --green: #27ae60;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Playfair Display', serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+    font-size: 14px;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header h1 {
+    font-family: var(--serif);
+    font-size: 20px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+  .header-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* PANELS */
+  .panel { display: none; padding: 0 0 80px 0; }
+  .panel.active { display: block; }
+
+  /* CAMERA VIEWFINDER */
+  .viewfinder-wrap {
+    position: relative;
+    background: #000;
+    aspect-ratio: 4/3;
+    overflow: hidden;
+  }
+  #cameraFeed {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .vf-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .vf-crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px; height: 60px;
+    border: 1px solid rgba(212,168,67,0.7);
+  }
+  .vf-crosshair::before, .vf-crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(212,168,67,0.7);
+  }
+  .vf-crosshair::before { top: 50%; left: 0; right: 0; height: 1px; transform: translateY(-50%); }
+  .vf-crosshair::after { left: 50%; top: 0; bottom: 0; width: 1px; transform: translateX(-50%); }
+
+  .vf-ev {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid var(--accent);
+    padding: 6px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  .vf-ev span { font-size: 22px; font-weight: 500; display: block; line-height: 1; }
+
+  .vf-lux {
+    position: absolute;
+    top: 12px; left: 12px;
+    background: rgba(0,0,0,0.7);
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .vf-lux b { color: var(--text); }
+
+  .measure-btn-wrap {
+    position: absolute;
+    bottom: 16px; left: 50%;
+    transform: translateX(-50%);
+  }
+  .measure-btn {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    background: rgba(212,168,67,0.15);
+    color: var(--accent);
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    font-family: var(--mono);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .measure-btn:active { background: rgba(212,168,67,0.35); transform: scale(0.95); }
+  .measure-btn.continuous { border-color: var(--green); color: var(--green); background: rgba(39,174,96,0.15); }
+
+  .cam-permission {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    gap: 12px;
+    color: var(--muted);
+    text-align: center;
+    padding: 20px;
+  }
+  .cam-permission .icon { font-size: 40px; }
+  .cam-permission p { font-size: 12px; line-height: 1.6; }
+  .cam-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 10px 24px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+
+  /* EV SCALE */
+  .ev-scale-wrap {
+    padding: 14px 16px 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .ev-scale-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .ev-scale {
+    height: 8px;
+    background: linear-gradient(to right, #1a3a6b, #2980b9, #27ae60, #f39c12, #e74c3c, #7b0000);
+    border-radius: 2px;
+    position: relative;
+    margin-bottom: 4px;
+  }
+  .ev-needle {
+    position: absolute;
+    top: -4px;
+    width: 3px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 1px;
+    transform: translateX(-50%);
+    transition: left 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
+    box-shadow: 0 0 6px var(--accent);
+  }
+  .ev-scale-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--muted);
+    padding-bottom: 10px;
+  }
+
+  /* RESULT CARDS */
+  .section {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .result-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 3px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .result-card.primary {
+    border-color: var(--accent);
+    background: rgba(212,168,67,0.08);
+  }
+  .result-card.locked {
+    border-color: var(--muted);
+    opacity: 0.6;
+  }
+  .result-card.locked .card-label::after { content: ' 🔒'; }
+  .card-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .card-value {
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+  }
+  .card-value.accent { color: var(--accent); }
+  .card-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* PRIORITY MODE */
+  .mode-bar {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 8px 4px;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    font-family: var(--mono);
+    transition: all 0.2s;
+  }
+  .mode-btn.active {
+    background: var(--accent);
+    color: #000;
+    font-weight: 500;
+  }
+
+  /* SLIDER */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .slider-label { font-size: 11px; color: var(--muted); width: 36px; letter-spacing: 1px; text-transform: uppercase; }
+  .slider-val { font-size: 13px; color: var(--accent); width: 60px; text-align: right; }
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+
+  /* EQUIPMENT PANEL */
+  .eq-section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .eq-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .add-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 8px;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .eq-item {
+    display: flex;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .eq-item.selected { border-color: var(--accent); background: rgba(212,168,67,0.08); }
+  .eq-item-info { flex: 1; }
+  .eq-item-name { font-size: 13px; color: var(--text); }
+  .eq-item-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .eq-item-icon { font-size: 20px; width: 28px; text-align: center; }
+  .eq-del { color: var(--muted); font-size: 16px; padding: 4px; cursor: pointer; }
+  .eq-del:active { color: var(--danger); }
+
+  .sel-badge {
+    font-size: 9px;
+    letter-spacing: 1px;
+    background: var(--accent);
+    color: #000;
+    padding: 2px 6px;
+    border-radius: 10px;
+    text-transform: uppercase;
+  }
+
+  /* FILM ISO quick select */
+  .iso-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .iso-chip {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    background: var(--surface2);
+    transition: all 0.15s;
+  }
+  .iso-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(212,168,67,0.1); }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 200;
+    align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    width: 100%;
+    border-top: 1px solid var(--border);
+    border-radius: 12px 12px 0 0;
+    padding: 20px 16px 40px;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .field-label { font-size: 11px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; margin-top: 14px; }
+  .field-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 13px;
+    border-radius: 3px;
+    outline: none;
+  }
+  .field-input:focus { border-color: var(--accent); }
+  select.field-input option { background: var(--surface2); }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-primary {
+    flex: 1;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+  .btn-secondary {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+
+  /* HISTOGRAM */
+  .histogram-wrap { padding: 10px 16px 0; }
+  .histogram {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 40px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 6px;
+    border-radius: 3px;
+  }
+  .hist-bar {
+    flex: 1;
+    background: rgba(212,168,67,0.5);
+    border-radius: 1px;
+    min-height: 2px;
+    transition: height 0.3s;
+  }
+  .hist-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--muted);
+    padding: 3px 6px 0;
+    letter-spacing: 1px;
+  }
+
+  /* EXPOSURE COMPENSATION */
+  .comp-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .comp-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; width: 36px; }
+  .comp-btns { display: flex; gap: 6px; }
+  .comp-btn {
+    width: 32px; height: 32px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    transition: all 0.15s;
+  }
+  .comp-btn:active { background: var(--accent); color: #000; }
+  .comp-val {
+    flex: 1;
+    text-align: center;
+    font-size: 15px;
+    color: var(--accent);
+  }
+
+  /* FILM MODE EXTRAS */
+  .film-badge {
+    display: inline-block;
+    background: rgba(212,168,67,0.15);
+    border: 1px solid var(--accent2);
+    color: var(--accent);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 2px;
+    margin-bottom: 12px;
+  }
+
+  /* NOTES */
+  .note-box {
+    background: rgba(212,168,67,0.05);
+    border-left: 3px solid var(--accent2);
+    padding: 10px 12px;
+    margin: 12px 16px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+    border-radius: 0 3px 3px 0;
+  }
+  .note-box b { color: var(--accent); }
+
+  .no-camera-fallback {
+    padding: 16px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  /* LIVE INDICATOR */
+  .live-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--danger);
+    display: inline-block;
+    animation: pulse 1s infinite;
+    margin-right: 6px;
+  }
+  .live-dot.active { background: var(--green); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* RECIPROCITY FAILURE ALERT */
+  .reciprocity-alert {
+    display: none;
+    margin: 0 16px 12px;
+    background: rgba(192,57,43,0.1);
+    border: 1px solid #c0392b;
+    padding: 10px 12px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #e74c3c;
+    line-height: 1.5;
+  }
+  .reciprocity-alert.show { display: block; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Pozometre Pro</h1>
+    <div class="header-sub">Işık Ölçer & Poz Hesaplayıcı</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:11px;color:var(--muted)" id="modeIndicator">—</div>
+    <div style="font-size:11px;color:var(--accent)" id="currentCamName">Kamera seçin</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('meter')">📷 Ölçüm</div>
+  <div class="tab" onclick="switchTab('equipment')">🎞 Ekipman</div>
+  <div class="tab" onclick="switchTab('film')">🎬 Film</div>
+</div>
+
+<!-- ===== METER TAB ===== -->
+<div class="panel active" id="panel-meter">
+
+  <!-- Camera Feed -->
+  <div class="viewfinder-wrap" id="viewfinderWrap">
+    <div class="cam-permission" id="camPermission">
+      <div class="icon">📷</div>
+      <p>Işık ölçümü için kamera erişimi gerekiyor.<br>Kamerayı açarak gerçek zamanlı EV değeri ölçebilirsiniz.</p>
+      <button class="cam-btn" onclick="startCamera()">Kamerayı Aç</button>
+    </div>
+    <video id="cameraFeed" autoplay playsinline style="display:none"></video>
+    <canvas id="analyzeCanvas" style="display:none"></canvas>
+    <div class="vf-overlay" id="vfOverlay" style="display:none">
+      <div class="vf-crosshair"></div>
+      <div class="vf-ev">
+        EV<span id="evDisplay">—</span>
+      </div>
+      <div class="vf-lux">Lux: <b id="luxDisplay">—</b></div>
+      <div class="measure-btn-wrap">
+        <button class="measure-btn" id="measureBtn" onclick="toggleMeasure()">ÖLÇÜM</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar">
+    <span class="live-dot" id="liveDot"></span>
+    <span id="statusText">Kamera kapalı</span>
+    <span style="flex:1"></span>
+    <span style="font-size:10px;color:var(--muted)" id="isoStatus">ISO: —</span>
+  </div>
+
+  <!-- EV Scale -->
+  <div class="ev-scale-wrap">
+    <div class="ev-scale-label">
+      <span>Karanlık</span>
+      <span>EV Ölçeği</span>
+      <span>Parlak</span>
+    </div>
+    <div class="ev-scale">
+      <div class="ev-needle" id="evNeedle" style="left:50%"></div>
+    </div>
+    <div class="ev-scale-ticks">
+      <span>EV 0</span><span>3</span><span>6</span><span>9</span><span>12</span><span>15</span><span>18</span>
+    </div>
+  </div>
+
+  <!-- Histogram -->
+  <div class="histogram-wrap">
+    <div class="histogram" id="histogram">
+      <div class="hist-bar" style="height:20%"></div>
+      <div class="hist-bar" style="height:30%"></div>
+      <div class="hist-bar" style="height:40%"></div>
+      <div class="hist-bar" style="height:60%"></div>
+      <div class="hist-bar" style="height:80%"></div>
+      <div class="hist-bar" style="height:85%"></div>
+      <div class="hist-bar" style="height:70%"></div>
+      <div class="hist-bar" style="height:55%"></div>
+      <div class="hist-bar" style="height:40%"></div>
+      <div class="hist-bar" style="height:25%"></div>
+    </div>
+    <div class="hist-labels"><span>Siyah</span><span>Histogram</span><span>Beyaz</span></div>
+  </div>
+
+  <!-- Exposure Compensation -->
+  <div class="comp-row">
+    <div class="comp-label">±EV</div>
+    <div class="comp-btns">
+      <button class="comp-btn" onclick="adjustComp(-1/3)">−</button>
+      <button class="comp-btn" onclick="adjustComp(-1)">−1</button>
+    </div>
+    <div class="comp-val" id="compVal">±0</div>
+    <div class="comp-btns">
+      <button class="comp-btn" onclick="adjustComp(1)">+1</button>
+      <button class="comp-btn" onclick="adjustComp(1/3)">+</button>
+    </div>
+  </div>
+
+  <!-- Priority Mode -->
+  <div class="section">
+    <div class="section-title">Öncelik Modu</div>
+    <div class="mode-bar">
+      <button class="mode-btn active" id="modeAuto" onclick="setMode('auto')">Tam Auto</button>
+      <button class="mode-btn" id="modeAv" onclick="setMode('av')">Diyafram (Av)</button>
+      <button class="mode-btn" id="modeTv" onclick="setMode('tv')">Enstantane (Tv)</button>
+      <button class="mode-btn" id="modeM" onclick="setMode('m')">Manuel (M)</button>
+    </div>
+
+    <!-- Fixed values -->
+    <div id="avControl" style="display:none">
+      <div class="slider-row">
+        <div class="slider-label">f/</div>
+        <input type="range" id="fixedAperture" min="0" max="14" step="1" value="5" oninput="onFixedChange()">
+        <div class="slider-val" id="fixedApertureVal">f/5.6</div>
+      </div>
+    </div>
+    <div id="tvControl" style="display:none">
+      <div class="slider-row">
+        <div class="slider-label">1/s</div>
+        <input type="range" id="fixedShutter" min="0" max="17" step="1" value="8" oninput="onFixedChange()">
+        <div class="slider-val" id="fixedShutterVal">1/125</div>
+      </div>
+    </div>
+    <div id="isoControl">
+      <div class="slider-row">
+        <div class="slider-label">ISO</div>
+        <input type="range" id="isoSlider" min="0" max="14" step="1" value="3" oninput="onIsoChange()">
+        <div class="slider-val" id="isoVal">ISO 400</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="section">
+    <div class="section-title">Önerilen Ayarlar</div>
+    <div class="result-grid">
+      <div class="result-card" id="cardAperture">
+        <div class="card-label">Diyafram</div>
+        <div class="card-value accent" id="resAperture">—</div>
+        <div class="card-sub">f-stop</div>
+      </div>
+      <div class="result-card" id="cardShutter">
+        <div class="card-label">Enstantane</div>
+        <div class="card-value accent" id="resShutter">—</div>
+        <div class="card-sub">saniye</div>
+      </div>
+      <div class="result-card" id="cardIso">
+        <div class="card-label">ISO</div>
+        <div class="card-value accent" id="resIso">—</div>
+        <div class="card-sub">hassasiyet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reciprocity Alert -->
+  <div class="reciprocity-alert" id="reciprocityAlert">
+    ⚠️ <b>Mütekabiliyet Yasası Sapması:</b> Bu enstantane süresinde film için gerçek poz süresi daha uzun olmalı. Önerilen düzeltilmiş süre: <span id="reciprocityVal">—</span>
+  </div>
+
+  <!-- Notes -->
+  <div class="note-box" id="exposureNote">
+    Işık ölçümü başlatmak için kamerayı açın ve ÖLÇÜM butonuna basın.
+  </div>
+
+</div>
+
+<!-- ===== EQUIPMENT TAB ===== -->
+<div class="panel" id="panel-equipment">
+  <div class="eq-section">
+    <div class="eq-title">📷 Dijital Makineler</div>
+    <div id="digitalList"></div>
+    <button class="add-btn" onclick="openModal('digital')">＋ Dijital Makine Ekle</button>
+  </div>
+  <div class="eq-section">
+    <div class="eq-title">🎞 Film Makineler</div>
+    <div id="filmCamList"></div>
+    <button class="add-btn" onclick="openModal('filmcam')">＋ Film Makine Ekle</button>
+  </div>
+  <div class="eq-section">
+    <div class="eq-title">🔭 Lensler</div>
+    <div id="lensList"></div>
+    <button class="add-btn" onclick="openModal('lens')">＋ Lens Ekle</button>
+  </div>
+</div>
+
+<!-- ===== FILM TAB ===== -->
+<div class="panel" id="panel-film">
+  <div class="section">
+    <div class="section-title">Film Bilgileri</div>
+    <div class="field-label">Mevcut Film</div>
+    <select class="field-input" id="filmSelect" onchange="onFilmChange()">
+      <option value="">Film seçin...</option>
+      <option value="kodak_portra400">Kodak Portra 400 (ISO 400, Renk)</option>
+      <option value="kodak_portra160">Kodak Portra 160 (ISO 160, Renk)</option>
+      <option value="kodak_gold200">Kodak Gold 200 (ISO 200, Renk)</option>
+      <option value="kodak_ultramax400">Kodak Ultramax 400 (ISO 400, Renk)</option>
+      <option value="fuji_provia100">Fuji Provia 100F (ISO 100, Slayt)</option>
+      <option value="fuji_velvia50">Fuji Velvia 50 (ISO 50, Slayt)</option>
+      <option value="fuji_superia400">Fuji Superia 400 (ISO 400, Renk)</option>
+      <option value="ilford_hp5">Ilford HP5+ (ISO 400, Siyah-Beyaz)</option>
+      <option value="ilford_fp4">Ilford FP4+ (ISO 125, Siyah-Beyaz)</option>
+      <option value="ilford_delta3200">Ilford Delta 3200 (ISO 3200, SB)</option>
+      <option value="kodak_tri_x">Kodak Tri-X 400 (ISO 400, SB)</option>
+      <option value="cinestill800">CineStill 800T (ISO 800, Tungsten)</option>
+      <option value="custom">Özel Film (ISO manuel girin)</option>
+    </select>
+
+    <div class="field-label">Film ISO'su</div>
+    <div class="iso-chips" id="filmIsoChips">
+      <div class="iso-chip" onclick="setFilmIso(50)">50</div>
+      <div class="iso-chip" onclick="setFilmIso(100)">100</div>
+      <div class="iso-chip" onclick="setFilmIso(125)">125</div>
+      <div class="iso-chip" onclick="setFilmIso(160)">160</div>
+      <div class="iso-chip" onclick="setFilmIso(200)">200</div>
+      <div class="iso-chip active" onclick="setFilmIso(400)">400</div>
+      <div class="iso-chip" onclick="setFilmIso(800)">800</div>
+      <div class="iso-chip" onclick="setFilmIso(1600)">1600</div>
+      <div class="iso-chip" onclick="setFilmIso(3200)">3200</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Push / Pull İşlemi</div>
+    <div class="mode-bar">
+      <button class="mode-btn" onclick="setPushPull(-2)">Pull −2</button>
+      <button class="mode-btn" onclick="setPushPull(-1)">Pull −1</button>
+      <button class="mode-btn active" id="ppNormal" onclick="setPushPull(0)">Normal</button>
+      <button class="mode-btn" onclick="setPushPull(1)">Push +1</button>
+      <button class="mode-btn" onclick="setPushPull(2)">Push +2</button>
+    </div>
+    <div class="note-box" id="pushPullNote">Normal banyo işlemi. Film üretici ISO değerinde çekilecek.</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Film Özellikleri</div>
+    <div id="filmInfo" style="color:var(--muted);font-size:12px;line-height:1.8">
+      Yukarıdan film seçin.
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Uzun Pozlama — Mütekabiliyet</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+      1 saniyenin üzerindeki sürelerde film için gerçek poz süresi hesaplayın.
+    </div>
+    <div class="slider-row">
+      <div class="slider-label" style="width:60px">Süre (s)</div>
+      <input type="range" id="recipSlider" min="0" max="10" step="1" value="0" oninput="calcReciprocity()">
+      <div class="slider-val" id="recipNominal">1s</div>
+    </div>
+    <div class="result-grid" style="margin-top:10px">
+      <div class="result-card primary" style="grid-column:span 2">
+        <div class="card-label">Düzeltilmiş Süre</div>
+        <div class="card-value accent" id="recipResult">—</div>
+        <div class="card-sub" id="recipFilmNote">Film seçin</div>
+      </div>
+      <div class="result-card">
+        <div class="card-label">Sapma</div>
+        <div class="card-value" id="recipDelta">—</div>
+        <div class="card-sub">stop</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Ekipman Ekle</div>
+    <div id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">İptal</button>
+      <button class="btn-primary" onclick="saveEquipment()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== STATE ====================
+let state = {
+  ev: null,
+  iso: 400,
+  compensation: 0,
+  mode: 'auto',
+  fixedAperture: 5.6,
+  fixedShutter: 1/125,
+  filmIso: 400,
+  pushPull: 0,
+  selectedCamera: null,
+  selectedLens: null,
+  cameraRunning: false,
+  measuring: false,
+  equipment: {
+    digital: [],
+    filmcam: [],
+    lens: []
+  }
+};
+
+let modalType = '';
+let videoStream = null;
+let measureInterval = null;
+
+// ISO stops
+const isoStops = [25,50,64,100,125,160,200,250,320,400,500,640,800,1600,3200];
+const apertureStops = [1.0,1.4,2.0,2.8,4.0,5.6,8.0,11,16,22,32,45,64,90,128];
+const shutterStops = ['30','15','8','4','2','1','1/2','1/4','1/8','1/15','1/30','1/60','1/125','1/250','1/500','1/1000','1/2000','1/4000'];
+const shutterVals  = [30,15,8,4,2,1,0.5,0.25,0.125,1/15,1/30,1/60,1/125,1/250,1/500,1/1000,1/2000,1/4000];
+
+// Reciprocity times (nominal → corrected) for various films
+const reciprocityData = {
+  fuji_velvia50: { exp: 1.3, note: 'Fuji Velvia 50 - Mütekabiliyet yoğun' },
+  fuji_provia100: { exp: 1.25, note: 'Fuji Provia 100F' },
+  ilford_fp4: { exp: 1.26, note: 'Ilford FP4+' },
+  ilford_hp5: { exp: 1.31, note: 'Ilford HP5+' },
+  ilford_delta3200: { exp: 1.05, note: 'Delta 3200 - Mütekabiliyet az' },
+  kodak_tri_x: { exp: 1.3, note: 'Kodak Tri-X 400' },
+  kodak_portra400: { exp: 1.2, note: 'Kodak Portra 400' },
+  kodak_portra160: { exp: 1.25, note: 'Kodak Portra 160' },
+  kodak_gold200: { exp: 1.3, note: 'Kodak Gold 200' },
+  cinestill800: { exp: 1.1, note: 'CineStill 800T' },
+  default: { exp: 1.3, note: 'Varsayılan tahmini' }
+};
+
+const recipSliderVals = [1,2,4,8,15,30,60,120,240,480,960];
+
+const filmInfoData = {
+  kodak_portra400: { color: 'Renk Negatif', lat: 'Çok Geniş (±5 stop)', grain: 'Düşük', note: 'Portre için ideal. Cilt tonlarında mükemmel. Aşırı pozlama yapar.' },
+  kodak_portra160: { color: 'Renk Negatif', lat: 'Geniş (±4 stop)', grain: 'Çok Düşük', note: 'En ince Portra. Stüdyo ve doğal ışık portreleri için.' },
+  kodak_gold200: { color: 'Renk Negatif', lat: 'Orta-Geniş', grain: 'Orta', note: 'Ekonomik, sıcak tonlar. Dış mekan ve günlük kullanım.' },
+  kodak_ultramax400: { color: 'Renk Negatif', lat: 'Orta-Geniş', grain: 'Orta', note: 'Yüksek kontrast, canlı renkler. Sokak ve hızlı çekim.' },
+  fuji_provia100: { color: 'Slayt (E-6)', lat: 'Dar (±2 stop)', grain: 'Çok Düşük', note: 'Hassas poz gerektirir. Canlı, soğuk renkler. Repro için.' },
+  fuji_velvia50: { color: 'Slayt (E-6)', lat: 'Çok Dar (±1 stop)', grain: 'Minimal', note: 'Doğa fotoğrafçılığının gözdesi. Yüksek doygunluk. ½ stop az poz önerilir.' },
+  fuji_superia400: { color: 'Renk Negatif', lat: 'Orta-Geniş', grain: 'Orta', note: 'Yeşil tonlara hafif eğilim. Soğuk ışık için iyi.' },
+  ilford_hp5: { color: 'S/B Negatif', lat: 'Çok Geniş (±4 stop)', grain: 'Orta', note: 'En çok yönlü SB film. Push çekimde harika. 800 veya 1600\'e push önerilir.' },
+  ilford_fp4: { color: 'S/B Negatif', lat: 'Geniş', grain: 'Düşük', note: 'Klasik, ince taneli SB. Portre ve mimari için.' },
+  ilford_delta3200: { color: 'S/B Negatif', lat: 'Orta', grain: 'Yüksek', note: 'Gerçek ISO ~1000. 3200 veya 6400\'e push ile çekilir.' },
+  kodak_tri_x: { color: 'S/B Negatif', lat: 'Geniş', grain: 'Orta-Yüksek', note: 'Ikonik film dokusu. Push çekim ve yüksek kontrast.' },
+  cinestill800: { color: 'Renk Negatif', lat: 'Geniş', grain: 'Belirgin', note: 'Tungsten dengeli. Neon ve artificial ışık için ideal. Halo efekti.' },
+};
+
+// Load saved equipment
+function loadEquipment() {
+  try {
+    const saved = localStorage.getItem('pozometre_equipment');
+    if (saved) state.equipment = JSON.parse(saved);
+  } catch(e) {}
+  renderEquipment();
+}
+
+function saveEquipmentToStorage() {
+  try { localStorage.setItem('pozometre_equipment', JSON.stringify(state.equipment)); } catch(e) {}
+}
+
+// ==================== CAMERA ====================
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    videoStream = stream;
+    const video = document.getElementById('cameraFeed');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('camPermission').style.display = 'none';
+    document.getElementById('vfOverlay').style.display = 'block';
+    state.cameraRunning = true;
+    document.getElementById('liveDot').classList.add('active');
+    document.getElementById('statusText').textContent = 'Kamera açık — ÖLÇÜM\'e basın';
+    // Auto measure loop
+    startContinuousMeasure();
+  } catch(e) {
+    document.getElementById('camPermission').innerHTML = `
+      <div class="icon">🚫</div>
+      <p>Kamera erişimi reddedildi veya desteklenmiyor.<br><br>
+      <b>Manuel EV girişi yapabilirsiniz:</b></p>
+      <div style="display:flex;gap:8px;margin-top:10px;justify-content:center">
+        <button class="comp-btn" style="width:40px;height:40px" onclick="manualEV(-1)">−</button>
+        <span style="padding:8px;color:var(--accent);font-size:18px" id="manualEVDisplay">EV 12</span>
+        <button class="comp-btn" style="width:40px;height:40px" onclick="manualEV(1)">+</button>
+      </div>
+      <button class="cam-btn" style="margin-top:12px" onclick="applyManualEV()">Hesapla</button>
+    `;
+    state.ev = 12;
+  }
+}
+
+let manualEvVal = 12;
+function manualEV(d) {
+  manualEvVal = Math.max(0, Math.min(20, manualEvVal + d));
+  document.getElementById('manualEVDisplay').textContent = 'EV ' + manualEvVal;
+}
+function applyManualEV() {
+  updateEV(manualEvVal);
+}
+
+function startContinuousMeasure() {
+  if (measureInterval) clearInterval(measureInterval);
+  measureInterval = setInterval(() => {
+    if (state.cameraRunning) measureLight();
+  }, 500);
+}
+
+function toggleMeasure() {
+  // Already measuring continuously; just trigger manual
+  measureLight();
+}
+
+function measureLight() {
+  const video = document.getElementById('cameraFeed');
+  const canvas = document.getElementById('analyzeCanvas');
+  if (!video || video.readyState < 2) return;
+  canvas.width = 64; canvas.height = 48;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, 64, 48);
+  const imageData = ctx.getImageData(0, 0, 64, 48);
+  const data = imageData.data;
+  let lum = 0;
+  const histogram = new Array(10).fill(0);
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i+1], b = data[i+2];
+    const l = 0.2126*r + 0.7152*g + 0.0722*b;
+    lum += l;
+    histogram[Math.min(9, Math.floor(l/256*10))]++;
+  }
+  lum /= (data.length / 4);
+  updateHistogram(histogram);
+
+  // Convert luminance to EV (calibrated)
+  const evRaw = Math.log2(Math.max(lum, 0.5) / 128 * (state.iso / 100) * 2.5 + 1);
+  const ev = Math.max(0, Math.min(20, evRaw + 8.5));
+  updateEV(ev);
+}
+
+function updateHistogram(hist) {
+  const bars = document.querySelectorAll('.hist-bar');
+  const max = Math.max(...hist, 1);
+  bars.forEach((b, i) => {
+    b.style.height = Math.max(5, (hist[i]/max)*100) + '%';
+  });
+}
+
+function updateEV(ev) {
+  state.ev = ev;
+  const rounded = Math.round(ev * 3) / 3;
+  document.getElementById('evDisplay').textContent = rounded.toFixed(1);
+  document.getElementById('luxDisplay').textContent = Math.round(Math.pow(2, ev) * 2.5);
+
+  // Move needle
+  const pct = Math.max(2, Math.min(98, (ev / 18) * 100));
+  document.getElementById('evNeedle').style.left = pct + '%';
+
+  calculateExposure();
+}
+
+// ==================== EXPOSURE CALC ====================
+const apertures = [1.0,1.4,2.0,2.8,4.0,5.6,8.0,11,16,22,32];
+const shutters  = [30,15,8,4,2,1,0.5,0.25,0.125,1/15,1/30,1/60,1/125,1/250,1/500,1/1000,1/2000,1/4000];
+const shutterLabels = ['30"','15"','8"','4"','2"','1"','1/2','1/4','1/8','1/15','1/30','1/60','1/125','1/250','1/500','1/1000','1/2000','1/4000'];
+
+function calculateExposure() {
+  if (state.ev === null) return;
+  const ev = state.ev + state.compensation;
+  const iso = state.iso;
+
+  // EV = log2(N²/t) at ISO 100; adjust for ISO
+  const evAdj = ev - Math.log2(iso / 100);
+
+  let ap, sh, isoRes;
+
+  if (state.mode === 'auto') {
+    // Pick sensible defaults
+    ap = closestAperture(5.6);
+    const t = Math.pow(ap, 2) / Math.pow(2, evAdj);
+    sh = clampShutter(t);
+    isoRes = iso;
+    markCard('cardAperture', false); markCard('cardShutter', false); markCard('cardIso', false);
+  } else if (state.mode === 'av') {
+    ap = state.fixedAperture;
+    const t = Math.pow(ap, 2) / Math.pow(2, evAdj);
+    sh = clampShutter(t);
+    isoRes = iso;
+    markCard('cardAperture', true); markCard('cardShutter', false); markCard('cardIso', false);
+  } else if (state.mode === 'tv') {
+    sh = state.fixedShutter;
+    const apCalc = Math.sqrt(sh * Math.pow(2, evAdj));
+    ap = closestAperture(apCalc);
+    isoRes = iso;
+    markCard('cardAperture', false); markCard('cardShutter', true); markCard('cardIso', false);
+  } else {
+    ap = state.fixedAperture;
+    sh = state.fixedShutter;
+    // Calculate needed ISO
+    const evBase = Math.log2(Math.pow(ap, 2) / sh);
+    const isoNeeded = 100 * Math.pow(2, evBase - ev);
+    isoRes = Math.round(closestISO(isoNeeded));
+    markCard('cardAperture', true); markCard('cardShutter', true); markCard('cardIso', false);
+  }
+
+  document.getElementById('resAperture').textContent = 'f/' + formatAp(ap);
+  document.getElementById('resShutter').textContent = formatShutter(sh);
+  document.getElementById('resIso').textContent = isoRes;
+
+  // Reciprocity check for film mode
+  const currentFilmCam = state.selectedCamera && state.equipment.filmcam.find(c=>c.id===state.selectedCamera);
+  if (currentFilmCam || document.getElementById('panel-film').classList.contains('active')) {
+    checkReciprocity(sh);
+  } else {
+    document.getElementById('reciprocityAlert').classList.remove('show');
+  }
+
+  updateNote(ap, sh, isoRes, ev);
+  document.getElementById('isoStatus').textContent = 'ISO: ' + iso;
+}
+
+function checkReciprocity(sh) {
+  if (sh >= 1) {
+    const film = document.getElementById('filmSelect').value;
+    const rd = reciprocityData[film] || reciprocityData.default;
+    const corrected = Math.pow(sh, rd.exp);
+    const alert = document.getElementById('reciprocityAlert');
+    alert.classList.add('show');
+    document.getElementById('reciprocityVal').textContent = formatShutter(corrected) + ' (' + rd.note + ')';
+  } else {
+    document.getElementById('reciprocityAlert').classList.remove('show');
+  }
+}
+
+function markCard(id, locked) {
+  const el = document.getElementById(id);
+  el.className = 'result-card' + (locked ? ' locked' : ' primary');
+}
+
+function closestAperture(target) {
+  return apertures.reduce((p,c) => Math.abs(c-target) < Math.abs(p-target) ? c : p);
+}
+
+function clampShutter(t) {
+  const all = shutters;
+  return all.reduce((p,c) => Math.abs(c-t) < Math.abs(p-t) ? c : p);
+}
+
+function closestISO(iso) {
+  const stops = isoStops;
+  return stops.reduce((p,c) => Math.abs(c-iso) < Math.abs(p-iso) ? c : p);
+}
+
+function formatAp(ap) {
+  return ap < 10 ? ap.toFixed(1) : Math.round(ap);
+}
+
+function formatShutter(sh) {
+  if (sh >= 1) return Math.round(sh) + '"';
+  const idx = shutters.findIndex(s => Math.abs(s-sh) < 0.001);
+  if (idx >= 0) return shutterLabels[idx];
+  if (sh >= 0.5) return '1/' + Math.round(1/sh);
+  return '1/' + Math.round(1/sh);
+}
+
+function updateNote(ap, sh, iso, ev) {
+  let note = '';
+  if (ev < 3) note = '<b>Çok düşük ışık.</b> Tripod kullanın. ISO artırmayı deneyin.';
+  else if (ev < 7) note = '<b>Düşük ışık.</b> Titreşim riskine dikkat. IS/VR açık olsun.';
+  else if (ev < 10) note = '<b>İç mekan ışığı.</b> Dengeli aydınlatma. İyi bir pencere ışığı.';
+  else if (ev < 13) note = '<b>Bulutlu dış mekan.</b> Hoş, diffüze ışık.';
+  else if (ev < 15) note = '<b>Güneşli dış mekan.</b> Klasik "Sunny 16" bölgesi.';
+  else note = '<b>Çok yoğun ışık.</b> ND filtre düşünün veya küçük diyafram kullanın.';
+  if (sh < 1/60) note += ' ⚠ El titresi riski — hızlı enstantane önerilir.';
+  document.getElementById('exposureNote').innerHTML = note;
+}
+
+// ==================== CONTROLS ====================
+function setMode(m) {
+  state.mode = m;
+  ['auto','av','tv','m'].forEach(id => {
+    document.getElementById('mode'+id.charAt(0).toUpperCase()+id.slice(1)).classList.toggle('active', id===m);
+  });
+  document.getElementById('avControl').style.display = (m==='av'||m==='m') ? 'block' : 'none';
+  document.getElementById('tvControl').style.display = (m==='tv'||m==='m') ? 'block' : 'none';
+  document.getElementById('isoControl').style.display = (m==='m') ? 'none' : 'block';
+  document.getElementById('modeIndicator').textContent = {auto:'Tam Otomatik',av:'Diyafram Öncelikli',tv:'Enstantane Öncelikli',m:'Manuel'}[m];
+  calculateExposure();
+}
+
+function onFixedChange() {
+  const apIdx = parseInt(document.getElementById('fixedAperture').value);
+  const shIdx = parseInt(document.getElementById('fixedShutter').value);
+  state.fixedAperture = apertureStops[apIdx];
+  state.fixedShutter = shutterVals[shIdx];
+  document.getElementById('fixedApertureVal').textContent = 'f/' + formatAp(apertureStops[apIdx]);
+  document.getElementById('fixedShutterVal').textContent = shutterStops[shIdx];
+  calculateExposure();
+}
+
+function onIsoChange() {
+  const idx = parseInt(document.getElementById('isoSlider').value);
+  state.iso = isoStops[idx];
+  document.getElementById('isoVal').textContent = 'ISO ' + isoStops[idx];
+  calculateExposure();
+}
+
+function adjustComp(delta) {
+  state.compensation = Math.max(-3, Math.min(3, state.compensation + delta));
+  const sign = state.compensation > 0 ? '+' : '';
+  document.getElementById('compVal').textContent = sign + state.compensation.toFixed(1);
+  calculateExposure();
+}
+
+// ==================== TABS ====================
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ==================== EQUIPMENT ====================
+function renderEquipment() {
+  renderList('digital', 'digitalList', '📷');
+  renderList('filmcam', 'filmCamList', '🎞');
+  renderList('lens', 'lensList', '🔭');
+}
+
+function renderList(type, containerId, icon) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  state.equipment[type].forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'eq-item' + (state.selectedCamera===item.id||state.selectedLens===item.id ? ' selected' : '');
+    div.innerHTML = `
+      <div class="eq-item-icon">${icon}</div>
+      <div class="eq-item-info" onclick="selectEquipment('${type}','${item.id}')">
+        <div class="eq-item-name">${item.name}</div>
+        <div class="eq-item-sub">${item.sub || ''}</div>
+      </div>
+      ${state.selectedCamera===item.id||state.selectedLens===item.id ? '<span class="sel-badge">Seçili</span>' : ''}
+      <div class="eq-del" onclick="deleteEquipment('${type}','${item.id}')">✕</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function selectEquipment(type, id) {
+  if (type === 'lens') {
+    state.selectedLens = state.selectedLens === id ? null : id;
+  } else {
+    state.selectedCamera = state.selectedCamera === id ? null : id;
+    // Set ISO from camera if digital
+    const cam = state.equipment[type].find(c=>c.id===id);
+    if (cam && cam.baseIso) {
+      const idx = isoStops.indexOf(parseInt(cam.baseIso));
+      if (idx >= 0) {
+        document.getElementById('isoSlider').value = idx;
+        state.iso = parseInt(cam.baseIso);
+        document.getElementById('isoVal').textContent = 'ISO ' + state.iso;
+      }
+    }
+    // Update camera name display
+    document.getElementById('currentCamName').textContent = cam ? cam.name : 'Kamera seçin';
+    document.getElementById('modeIndicator').textContent = type === 'filmcam' ? '🎞 Film' : '📷 Dijital';
+  }
+  renderEquipment();
+  calculateExposure();
+}
+
+function deleteEquipment(type, id) {
+  state.equipment[type] = state.equipment[type].filter(i => i.id !== id);
+  if (state.selectedCamera === id) state.selectedCamera = null;
+  if (state.selectedLens === id) state.selectedLens = null;
+  saveEquipmentToStorage();
+  renderEquipment();
+}
+
+// ==================== MODAL ====================
+function openModal(type) {
+  modalType = type;
+  const titles = { digital: 'Dijital Makine Ekle', filmcam: 'Film Makine Ekle', lens: 'Lens Ekle' };
+  document.getElementById('modalTitle').textContent = titles[type];
+
+  let body = '';
+  if (type === 'digital') {
+    body = `
+      <div class="field-label">Marka / Model</div>
+      <input class="field-input" id="eqName" placeholder="örn. Sony A7 III">
+      <div class="field-label">Sensör</div>
+      <select class="field-input" id="eqSensor">
+        <option>Full Frame</option><option>APS-C</option><option>Micro 4/3</option><option>Medium Format</option><option>1 inç</option>
+      </select>
+      <div class="field-label">Temel ISO</div>
+      <select class="field-input" id="eqBaseIso">
+        ${isoStops.map(i=>`<option value="${i}"${i===100?'selected':''}>${i}</option>`).join('')}
+      </select>
+      <div class="field-label">Max ISO</div>
+      <input class="field-input" id="eqMaxIso" placeholder="örn. 51200" type="number">
+      <div class="field-label">Not (isteğe bağlı)</div>
+      <input class="field-input" id="eqNote" placeholder="örn. Düşük ışık performansı mükemmel">
+    `;
+  } else if (type === 'filmcam') {
+    body = `
+      <div class="field-label">Marka / Model</div>
+      <input class="field-input" id="eqName" placeholder="örn. Nikon FM2">
+      <div class="field-label">Format</div>
+      <select class="field-input" id="eqFormat">
+        <option>35mm (135)</option><option>120 (Medium Format)</option><option>4x5" (LF)</option><option>8x10" (LF)</option><option>110</option>
+      </select>
+      <div class="field-label">Enstantane Aralığı</div>
+      <input class="field-input" id="eqShutterRange" placeholder="örn. 1s — 1/4000">
+      <div class="field-label">Not</div>
+      <input class="field-input" id="eqNote" placeholder="örn. Spot metre dahili">
+    `;
+  } else {
+    body = `
+      <div class="field-label">Lens Adı</div>
+      <input class="field-input" id="eqName" placeholder="örn. Canon 50mm f/1.4">
+      <div class="field-label">Odak Uzaklığı (mm)</div>
+      <input class="field-input" id="eqFocal" placeholder="örn. 50" type="number">
+      <div class="field-label">Max Diyafram</div>
+      <select class="field-input" id="eqMaxAp">
+        ${[1.0,1.2,1.4,1.8,2.0,2.5,2.8,3.5,4.0,5.6].map(a=>`<option>f/${a}</option>`).join('')}
+      </select>
+      <div class="field-label">Tip</div>
+      <select class="field-input" id="eqLensType">
+        <option>Prime</option><option>Zoom</option><option>Makro</option><option>Balıkgözü</option><option>Tilt-Shift</option>
+      </select>
+    `;
+  }
+
+  document.getElementById('modalBody').innerHTML = body;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function saveEquipment() {
+  const name = document.getElementById('eqName')?.value?.trim();
+  if (!name) return;
+
+  const id = 'eq_' + Date.now();
+  let item = { id, name };
+
+  if (modalType === 'digital') {
+    item.sub = document.getElementById('eqSensor').value + ' · ISO ' + document.getElementById('eqBaseIso').value + '–' + (document.getElementById('eqMaxIso').value||'?');
+    item.baseIso = document.getElementById('eqBaseIso').value;
+    item.note = document.getElementById('eqNote').value;
+  } else if (modalType === 'filmcam') {
+    item.sub = document.getElementById('eqFormat').value + ' · ' + document.getElementById('eqShutterRange').value;
+    item.format = document.getElementById('eqFormat').value;
+    item.note = document.getElementById('eqNote').value;
+    item.isFilm = true;
+  } else {
+    item.sub = document.getElementById('eqFocal').value + 'mm · ' + document.getElementById('eqMaxAp').value + ' · ' + document.getElementById('eqLensType').value;
+    item.focal = document.getElementById('eqFocal').value;
+    item.maxAp = document.getElementById('eqMaxAp').value;
+  }
+
+  state.equipment[modalType].push(item);
+  saveEquipmentToStorage();
+  closeModal();
+  renderEquipment();
+}
+
+// ==================== FILM TAB ====================
+function setFilmIso(iso) {
+  state.filmIso = iso;
+  state.iso = iso;
+  document.querySelectorAll('.iso-chip').forEach(c => {
+    c.classList.toggle('active', parseInt(c.textContent) === iso);
+  });
+  document.getElementById('isoSlider').value = Math.max(0, isoStops.indexOf(iso));
+  document.getElementById('isoVal').textContent = 'ISO ' + iso;
+  calculateExposure();
+}
+
+function onFilmChange() {
+  const film = document.getElementById('filmSelect').value;
+  const info = filmInfoData[film];
+  const div = document.getElementById('filmInfo');
+  if (info) {
+    div.innerHTML = `
+      <div style="margin-bottom:6px"><span style="color:var(--accent)">Tip:</span> ${info.color}</div>
+      <div style="margin-bottom:6px"><span style="color:var(--accent)">Dinamik Alan:</span> ${info.lat}</div>
+      <div style="margin-bottom:6px"><span style="color:var(--accent)">Tane:</span> ${info.grain}</div>
+      <div style="color:var(--text);margin-top:8px;line-height:1.6">${info.note}</div>
+    `;
+  } else {
+    div.innerHTML = 'Film seçin.';
+  }
+  calcReciprocity();
+}
+
+function setPushPull(val) {
+  state.pushPull = val;
+  document.querySelectorAll('.panel#panel-film .mode-btn').forEach((b,i) => {
+    b.classList.toggle('active', i === val+2);
+  });
+  const notes = {
+    '-2': 'Pull −2: Filmi 2 stop düşük çekin, banyoda kısa tutun. Kontrast düşer, tonlar yumuşar.',
+    '-1': 'Pull −1: 1 stop düşük çekim. Highlight detayı için. Portre filmlerle iyi çalışır.',
+    '0': 'Normal banyo işlemi. Film üretici ISO değerinde çekilecek.',
+    '1': 'Push +1: Filmi 1 stop fazla banyo yapın. Kontrast ve tane artar.',
+    '2': 'Push +2: 2 stop push. Daha yoğun tane, yüksek kontrast. HP5, Tri-X ile iyi sonuç.'
+  };
+  document.getElementById('pushPullNote').textContent = notes[val] || '';
+  const effectiveIso = state.filmIso * Math.pow(2, val);
+  setFilmIso(Math.min(3200, effectiveIso));
+}
+
+function calcReciprocity() {
+  const idx = parseInt(document.getElementById('recipSlider').value);
+  const nominal = recipSliderVals[idx];
+  document.getElementById('recipNominal').textContent = nominal + 's';
+
+  if (nominal < 1) {
+    document.getElementById('recipResult').textContent = nominal + 's';
+    document.getElementById('recipDelta').textContent = '0';
+    document.getElementById('recipFilmNote').textContent = 'Düzeltme gerekmez';
+    return;
+  }
+
+  const film = document.getElementById('filmSelect').value;
+  const rd = reciprocityData[film] || reciprocityData.default;
+  const corrected = Math.pow(nominal, rd.exp);
+  const delta = Math.log2(corrected / nominal);
+
+  document.getElementById('recipResult').textContent = formatShutter(corrected);
+  document.getElementById('recipDelta').textContent = '+' + delta.toFixed(1);
+  document.getElementById('recipFilmNote').textContent = rd.note;
+}
+
+// ==================== INIT ====================
+loadEquipment();
+setMode('auto');
+calcReciprocity();
+
+// Init aperture/shutter sliders
+document.getElementById('fixedAperture').max = apertureStops.length - 1;
+document.getElementById('fixedShutter').max = shutterVals.length - 1;
+</script>
+</body>
+</html>
